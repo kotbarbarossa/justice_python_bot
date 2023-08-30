@@ -9,6 +9,7 @@ from random import randrange
 # import datetime as dt
 import re
 from case_detail_by_number import case_search, check_case
+from surname_search import cases_search_by_name
 
 RETRY_TIME = 60
 
@@ -175,10 +176,7 @@ def parse_text(update, context):
 
 def user_cases_list(update, context):
     """Функция для вывода списка дел."""
-    chat = update.effective_chat
-    context.bot.send_message(chat_id=chat.id,
-                             text=f'тут будет список для {OWNER_NAME}',
-                             )
+    cases_search_by_name(OWNER_NAME, update, context)
 
 
 def user_favorite_case(update, context):

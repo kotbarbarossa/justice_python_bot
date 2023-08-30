@@ -165,4 +165,3 @@ cython_debug/
 .DS_Store
 
 temp.py
-surname_search.py
