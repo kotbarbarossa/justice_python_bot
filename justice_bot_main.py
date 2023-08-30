@@ -8,7 +8,7 @@ from telegram import ReplyKeyboardMarkup
 # import logging
 from random import randrange
 # import datetime as dt
-
+import re
 
 RETRY_TIME = 60
 
@@ -63,6 +63,7 @@ def wake_up(update, context):
                                  )
 
         OWNER_CHAT_ID = chat.id
+
     else:
         if OWNER_NAME is None:
             hello_again = (
@@ -98,10 +99,11 @@ def check_tokens():
 
 
 def parse_text(update, context):
-    """Отправка рандомного и не очень ответа в чат."""
+    """Разбор сообщений пользователя."""
     chat = update.effective_chat
     command = update.message.text
     global OWNER_NAME
+    global OWNER_CASE
 
     if OWNER_CHAT_ID is not None and OWNER_CHAT_ID != chat.id:
         text = 'You dont have permisson to use this bot!'
@@ -114,12 +116,34 @@ def parse_text(update, context):
     }
 
     if command not in COMMANDS:
-        OWNER_NAME = command
-        text = f'Данные для {OWNER_NAME} сохранены'
-        context.bot.send_message(chat_id=chat.id,
-                                 text=text,
-                                 reply_markup=reply_markup
-                                 )
+        pattern_name = re.compile(r"([А-ЯЁ][а-яё]+[ ][А-ЯЁ]\.[А-ЯЁ]\.)")
+        pattern_case = re.compile(
+            r"(\d\d[A-Z][A-Z]\d\d\d\d[-]\d\d[-]\d\d\d\d[-]\d\d\d\d\d\d[-]\d\d)"
+            )
+        if pattern_name.match(command):
+            OWNER_NAME = command
+            text = f'Данные для {OWNER_NAME} сохранены'
+            context.bot.send_message(chat_id=chat.id,
+                                     text=text,
+                                     reply_markup=reply_markup
+                                     )
+        elif pattern_case.match(command):
+            OWNER_CASE = command
+            text = f'Дело {OWNER_CASE} добавлено в избранное!'
+            context.bot.send_message(chat_id=chat.id,
+                                     text=text,
+                                     reply_markup=reply_markup
+                                     )
+        else:
+            text = ('Для добавления/изменения имени или номера дела '
+                    'нужно следовать шаблону: '
+                    'Вввод для имени должен соответствовать -> "Иванов И.И.". '
+                    'Вввод для номера дела должен соответствовать -> '
+                    '"77RS0020-01-2018-016832-97"')
+            context.bot.send_message(chat_id=chat.id,
+                                     text=text,
+                                     reply_markup=reply_markup
+                                     )
 
     else:
         COMMANDS[command](update, context)
@@ -129,7 +153,7 @@ def user_cases_list(update, context):
     """Функция для вывода списка дел."""
     chat = update.effective_chat
     context.bot.send_message(chat_id=chat.id,
-                             text=f'тут будет выводится список дел для {OWNER_NAME}',
+                             text=f'тут будет список для {OWNER_NAME}',
                              reply_markup=reply_markup
                              )
 
@@ -138,7 +162,7 @@ def user_favorite_case(update, context):
     """Функция для вывода избранного дела."""
     chat = update.effective_chat
     context.bot.send_message(chat_id=chat.id,
-                             text='тут будет выводится информация о деле',
+                             text=f'тут будет информация о деле {OWNER_CASE}',
                              reply_markup=reply_markup
                              )
 
