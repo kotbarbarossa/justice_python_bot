@@ -1,13 +1,14 @@
-import requests
+# import requests
 import os
 from dotenv import load_dotenv
 import time
 import telegram
 from telegram.ext import Updater, Filters, MessageHandler, CommandHandler
 from telegram import ReplyKeyboardMarkup
-import logging
+# import logging
 from random import randrange
-import datetime as dt
+# import datetime as dt
+
 
 RETRY_TIME = 60
 
@@ -35,6 +36,10 @@ def wake_up(update, context):
     name = update.message.chat.first_name
     username = update.message.chat.username
     global OWNER_CHAT_ID
+
+    if OWNER_CHAT_ID is not None and OWNER_CHAT_ID != chat.id:
+        text = 'You dont have permisson to use this bot!'
+        return context.bot.send_message(chat_id=chat.id, text=text,)
 
     random_status = randrange(6)
     statuses = {
@@ -97,6 +102,10 @@ def parse_text(update, context):
     chat = update.effective_chat
     command = update.message.text
     global OWNER_NAME
+
+    if OWNER_CHAT_ID is not None and OWNER_CHAT_ID != chat.id:
+        text = 'You dont have permisson to use this bot!'
+        return context.bot.send_message(chat_id=chat.id, text=text,)
 
     COMMANDS = {
         "Прсмртеть список дел \U00002696 \U0001F50D": user_cases_list,
