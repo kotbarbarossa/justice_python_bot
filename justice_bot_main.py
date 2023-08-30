@@ -1,4 +1,3 @@
-# import requests
 import os
 from dotenv import load_dotenv
 import time
@@ -9,6 +8,7 @@ from telegram import ReplyKeyboardMarkup
 from random import randrange
 # import datetime as dt
 import re
+from case_detail_by_number import case_search, check_case
 
 RETRY_TIME = 60
 
@@ -22,12 +22,10 @@ OWNER_CASE = None
 bot = telegram.Bot(token=TELEGRAM_TOKEN)
 
 buttons = [
-    ["Прсмртеть список дел \U00002696 \U0001F50D"],
-    ["Посмотреть избранное дело \U00002696 \U0001F4DA"],
+    {''},
+    {''},
     ['Тыкнуть бота']
 ]
-
-reply_markup = ReplyKeyboardMarkup(buttons, resize_keyboard=True)
 
 
 def wake_up(update, context):
@@ -35,6 +33,7 @@ def wake_up(update, context):
     chat = update.effective_chat
     name = update.message.chat.first_name
     username = update.message.chat.username
+    reply_markup = ReplyKeyboardMarkup(buttons, resize_keyboard=True)
     global OWNER_CHAT_ID
 
     if OWNER_CHAT_ID is not None and OWNER_CHAT_ID != chat.id:
@@ -60,6 +59,7 @@ def wake_up(update, context):
         )
         context.bot.send_message(chat_id=chat.id,
                                  text=hello,
+                                 reply_markup=reply_markup
                                  )
 
         OWNER_CHAT_ID = chat.id
@@ -72,6 +72,7 @@ def wake_up(update, context):
             )
             context.bot.send_message(chat_id=chat.id,
                                      text=hello_again,
+                                     reply_markup=reply_markup
                                      )
 
         else:
@@ -104,6 +105,7 @@ def parse_text(update, context):
     command = update.message.text
     global OWNER_NAME
     global OWNER_CASE
+    global buttons
 
     if OWNER_CHAT_ID is not None and OWNER_CHAT_ID != chat.id:
         text = 'You dont have permisson to use this bot!'
@@ -121,20 +123,42 @@ def parse_text(update, context):
             r"(\d\d[A-Z][A-Z]\d\d\d\d[-]\d\d[-]\d\d\d\d[-]\d\d\d\d\d\d[-]\d\d)"
             )
         if pattern_name.match(command):
+
             OWNER_NAME = command
+            buttons[0].add("Прсмртеть список дел \U00002696 \U0001F50D")
+            reply_markup = ReplyKeyboardMarkup(buttons, resize_keyboard=True)
             text = f'Данные для {OWNER_NAME} сохранены'
             context.bot.send_message(chat_id=chat.id,
                                      text=text,
                                      reply_markup=reply_markup
                                      )
+
         elif pattern_case.match(command):
-            OWNER_CASE = command
-            text = f'Дело {OWNER_CASE} добавлено в избранное!'
+            text = 'запрашиваем информацию на сервере'
             context.bot.send_message(chat_id=chat.id,
                                      text=text,
-                                     reply_markup=reply_markup
                                      )
+            if check_case(command):
+                OWNER_CASE = command
+                buttons[1].add(
+                    "Посмотреть избранное дело \U00002696 \U0001F4DA"
+                    )
+                reply_markup = ReplyKeyboardMarkup(
+                    buttons,
+                    resize_keyboard=True)
+                text = f'Дело {OWNER_CASE} добавлено в избранное!'
+                context.bot.send_message(chat_id=chat.id,
+                                         text=text,
+                                         reply_markup=reply_markup
+                                         )
+            else:
+                text = ('Дела с таким номером не существует! \n'
+                        'Дело не было добавлено в избранное')
+                context.bot.send_message(chat_id=chat.id,
+                                         text=text,
+                                         )
         else:
+            reply_markup = ReplyKeyboardMarkup(buttons, resize_keyboard=True)
             text = ('Для добавления/изменения имени или номера дела '
                     'нужно следовать шаблону: '
                     'Вввод для имени должен соответствовать -> "Иванов И.И.". '
@@ -154,17 +178,12 @@ def user_cases_list(update, context):
     chat = update.effective_chat
     context.bot.send_message(chat_id=chat.id,
                              text=f'тут будет список для {OWNER_NAME}',
-                             reply_markup=reply_markup
                              )
 
 
 def user_favorite_case(update, context):
     """Функция для вывода избранного дела."""
-    chat = update.effective_chat
-    context.bot.send_message(chat_id=chat.id,
-                             text=f'тут будет информация о деле {OWNER_CASE}',
-                             reply_markup=reply_markup
-                             )
+    case_search(OWNER_CASE, update, context)
 
 
 def main():
