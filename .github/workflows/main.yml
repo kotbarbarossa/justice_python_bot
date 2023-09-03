@@ -84,7 +84,7 @@ jobs:
             sudo docker pull kotbarbarossa/justice_python_bot:latest
             touch .env
             echo TELEGRAM_TOKEN=${{ secrets.TELEGRAM_TOKEN }} >> .env
-            sudo docker --name run justice_python_bot_container kotbarbarossa/justice_python_bot
+            sudo docker run --name justice_python_bot_container kotbarbarossa/justice_python_bot
 
   send_message:
     runs-on: ubuntu-latest
