@@ -1,14 +1,13 @@
 import requests
-from bs4 import BeautifulSoup as bs
+from bs4 import BeautifulSoup
 
 
 def get_case_url(name, page_number):
     """Функия генерирует ссылку на список дел."""
-    search_url = ('https://mos-gorsud.ru/search?formType=shortForm'
-                  '&participant='f'"{name}"'
-                  '&page='f'{page_number}'
-                  )
-    return search_url
+    return ('https://mos-gorsud.ru/search?formType=shortForm'
+            '&participant='f'"{name}"'
+            '&page='f'{page_number}'
+            )
 
 
 def cases_search_by_name(name, update, context):
@@ -28,7 +27,7 @@ def cases_search_by_name(name, update, context):
 
         r = requests.get(get_case_url(name, page), headers=headers)
 
-        soup = bs(r.text, "html.parser")
+        soup = BeautifulSoup(r.text, "html.parser")
 
         resultsearch_text = soup.find_all('div', class_='resultsearch_text')[0]
         resultsearch_text_message = [i.text.strip() for i in resultsearch_text]
@@ -42,10 +41,10 @@ def cases_search_by_name(name, update, context):
             '\n', '').replace(
             '\t', '').replace('   ', '').strip() for i in table_content]
 
-        TABLE_LENGHT = 7
+        table_lenght: int = 7
 
         table_content_list = list(
-            func_chunks_generators(table_content_list, TABLE_LENGHT)
+            func_chunks_generators(table_content_list, table_lenght)
         )
 
         result_list = []
@@ -78,13 +77,12 @@ def cases_search_by_name(name, update, context):
         context.bot.send_message(chat_id=chat.id,
                                  text=text,
                                  )
-        return None
+
     except Exception:
         text = 'произошла ошибка при запросе информации у сервера'
         context.bot.send_message(chat_id=chat.id,
                                  text=text,
                                  )
-        return None
 
 
 def func_chunks_generators(lst, n):

@@ -1,5 +1,5 @@
 import requests
-from bs4 import BeautifulSoup as bs
+from bs4 import BeautifulSoup
 
 
 def check_case(case):
@@ -10,7 +10,7 @@ def check_case(case):
                       )
         r = requests.get(search_url, headers=headers)
 
-        soup = bs(r.text, "html.parser")
+        soup = BeautifulSoup(r.text, "html.parser")
         link_object = soup.find_all('a', class_='detailsLink')
         detail_link = link_object[0]['href']
         return True if detail_link else False
@@ -34,7 +34,7 @@ def case_search(case, update, context):
                       )
         r = requests.get(search_url, headers=headers)
 
-        soup = bs(r.text, "html.parser")
+        soup = BeautifulSoup(r.text, "html.parser")
         link_object = soup.find_all('a', class_='detailsLink')
         detail_link = link_object[0]['href']
     except IndexError:
@@ -42,18 +42,17 @@ def case_search(case, update, context):
         context.bot.send_message(chat_id=chat.id,
                                  text=text,
                                  )
-        return None
+
     except Exception:
         text = 'произошла ошибка при запросе информации у сервера'
         context.bot.send_message(chat_id=chat.id,
                                  text=text,
                                  )
-        return None
 
     try:
         detail_url = 'https://mos-gorsud.ru' + detail_link
         r = requests.get(detail_url, headers=headers)
-        soup = bs(r.text, "html.parser")
+        soup = BeautifulSoup(r.text, "html.parser")
         left_info = soup.find_all(class_="left")
         right_info = soup.find_all(class_="right")
         list_left = [i.text.replace('\n', '').strip() for i in left_info]
@@ -77,4 +76,3 @@ def case_search(case, update, context):
         context.bot.send_message(chat_id=chat.id,
                                  text=text,
                                  )
-        return None

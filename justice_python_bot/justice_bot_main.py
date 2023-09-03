@@ -1,15 +1,16 @@
 import os
-from dotenv import load_dotenv
-import time
-import telegram
-from telegram.ext import Updater, Filters, MessageHandler, CommandHandler
-from telegram import ReplyKeyboardMarkup
-# import logging
-from random import randrange
 # import datetime as dt
 import re
+import time
+# import logging
+from random import randrange
+
+import telegram
 from case_detail_by_number import case_search, check_case
+from dotenv import load_dotenv
 from surname_search import cases_search_by_name
+from telegram import ReplyKeyboardMarkup
+from telegram.ext import CommandHandler, Filters, MessageHandler, Updater
 
 RETRY_TIME = 60
 
@@ -75,7 +76,6 @@ def wake_up(update, context):
                                      text=hello_again,
                                      reply_markup=reply_markup
                                      )
-
         else:
             hello_again = (
                 f'Бот {status}. '
@@ -86,6 +86,7 @@ def wake_up(update, context):
                                      text=hello_again,
                                      reply_markup=reply_markup
                                      )
+    return None
 
 
 def check_tokens():
@@ -112,13 +113,13 @@ def parse_text(update, context):
         text = 'You dont have permisson to use this bot!'
         return context.bot.send_message(chat_id=chat.id, text=text,)
 
-    COMMANDS = {
+    commands = {
         "Прсмртеть список дел \U00002696 \U0001F50D": user_cases_list,
         "Посмотреть избранное дело \U00002696 \U0001F4DA": user_favorite_case,
         'Тыкнуть бота': wake_up,
     }
 
-    if command not in COMMANDS:
+    if command not in commands:
         pattern_name = re.compile(r"([А-ЯЁ][а-яё]+[ ][А-ЯЁ]\.[А-ЯЁ]\.)")
         pattern_case = re.compile(
             r"(\d\d[A-Z][A-Z]\d\d\d\d[-]\d\d[-]\d\d\d\d[-]\d\d\d\d\d\d[-]\d\d)"
@@ -152,12 +153,14 @@ def parse_text(update, context):
                                          text=text,
                                          reply_markup=reply_markup
                                          )
+
             else:
                 text = ('Дела с таким номером не существует! \n'
                         'Дело не было добавлено в избранное')
                 context.bot.send_message(chat_id=chat.id,
                                          text=text,
                                          )
+
         else:
             reply_markup = ReplyKeyboardMarkup(buttons, resize_keyboard=True)
             text = ('Для добавления/изменения имени или номера дела '
@@ -171,7 +174,9 @@ def parse_text(update, context):
                                      )
 
     else:
-        COMMANDS[command](update, context)
+        commands[command](update, context)
+
+    return None
 
 
 def user_cases_list(update, context):
@@ -186,11 +191,11 @@ def user_favorite_case(update, context):
 
 def main():
     """Основная логика работы бота."""
-    UPADTER = Updater(token=TELEGRAM_TOKEN)
-    UPADTER.dispatcher.add_handler(CommandHandler('start', wake_up))
-    UPADTER.dispatcher.add_handler(MessageHandler(Filters.text, parse_text))
+    updater = Updater(token=TELEGRAM_TOKEN)
+    updater.dispatcher.add_handler(CommandHandler('start', wake_up))
+    updater.dispatcher.add_handler(MessageHandler(Filters.text, parse_text))
 
-    UPADTER.start_polling()
+    updater.start_polling()
 
     check_tokens()
 
