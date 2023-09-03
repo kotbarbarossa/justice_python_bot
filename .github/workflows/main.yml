@@ -80,7 +80,7 @@ jobs:
           passphrase: ${{ secrets.PASSPHRASE }}
           file: workflows/main.yml
           script: |
-            sudo docker container stop kotbarbarossa/justice_python_bot
+            sudo docker stop $(sudo docker ps -a -q)
             sudo docker pull kotbarbarossa/justice_python_bot:latest
             touch .env
             echo TELEGRAM_TOKEN=${{ secrets.TELEGRAM_TOKEN }} >> .env
