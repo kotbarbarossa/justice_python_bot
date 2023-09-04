@@ -1,0 +1,8 @@
+version: '3.3'
+
+  bot:
+    image: kotbarbarossa/justice_python_bot:latest
+    restart: always
+    env_file:
+      - ./.env
+    container_name: justice_python_bot
