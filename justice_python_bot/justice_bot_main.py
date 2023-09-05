@@ -6,6 +6,7 @@ import time
 from random import randrange
 
 import telegram
+from bot_backend_api import get_api_answer, post_new_user, put_user_info
 from case_detail_by_number import case_search, check_case
 from dotenv import load_dotenv
 from surname_search import cases_search_by_name
@@ -17,15 +18,12 @@ RETRY_TIME = 60
 load_dotenv()
 
 TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
-OWNER_CHAT_ID = None
-OWNER_NAME = None
-OWNER_CASE = None
 
 bot = telegram.Bot(token=TELEGRAM_TOKEN)
 
 buttons = [
-    {''},
-    {''},
+    ["Прсмртеть список дел \U00002696 \U0001F50D"],
+    ["Посмотреть избранное дело \U00002696 \U0001F4DA"],
     ['Тыкнуть бота']
 ]
 
@@ -36,11 +34,7 @@ def wake_up(update, context):
     name = update.message.chat.first_name
     username = update.message.chat.username
     reply_markup = ReplyKeyboardMarkup(buttons, resize_keyboard=True)
-    global OWNER_CHAT_ID
-
-    if OWNER_CHAT_ID is not None and OWNER_CHAT_ID != chat.id:
-        text = 'You dont have permisson to use this bot!'
-        return context.bot.send_message(chat_id=chat.id, text=text,)
+    user = get_api_answer(chat.id)
 
     random_status = randrange(6)
     statuses = {
@@ -53,7 +47,7 @@ def wake_up(update, context):
     }
     status = statuses[str(random_status)]
 
-    if OWNER_CHAT_ID is None:
+    if not user:
         hello = (
             f'Привет {name}.{username}! Это твой персональный приватный бот. '
             f'Он закреплен за твоим пользователем: ({chat.id})!'
@@ -64,10 +58,10 @@ def wake_up(update, context):
                                  reply_markup=reply_markup
                                  )
 
-        OWNER_CHAT_ID = chat.id
+        post_new_user(chat.id)
 
     else:
-        if OWNER_NAME is None:
+        if not user['name'] and not user['case_id']:
             hello_again = (
                 f'Бот {status}. Отслеживание дел не ведется.'
                 'Пожалуйста веди свое имя в формате "Иванов И.И."'
@@ -76,17 +70,39 @@ def wake_up(update, context):
                                      text=hello_again,
                                      reply_markup=reply_markup
                                      )
-        else:
+
+        elif not user['case_id']:
             hello_again = (
                 f'Бот {status}. '
-                f'Отслеживание дел ведется для имени: {OWNER_NAME}! '
-                f'Сохраненое дело -> {OWNER_CASE}.'
+                f'Отслеживание дел ведется для имени: {user["name"]}! '
+                'Сохраненного дела нет.'
             )
             context.bot.send_message(chat_id=chat.id,
                                      text=hello_again,
                                      reply_markup=reply_markup
                                      )
-    return None
+
+        elif not user['name']:
+            hello_again = (
+                f'Бот {status}. Отслеживание дел не ведется. '
+                f'Сохраненое дело -> {user["case_id"]}.'
+            )
+            context.bot.send_message(chat_id=chat.id,
+                                     text=hello_again,
+                                     reply_markup=reply_markup
+                                     )
+
+        else:
+            hello_again = (
+                f'Бот {status}. '
+                f'Отслеживание дел ведется для имени: {user["name"]}! '
+                f'Сохраненое дело -> {user["case_id"]}.'
+            )
+            context.bot.send_message(chat_id=chat.id,
+                                     text=hello_again,
+                                     reply_markup=reply_markup
+                                     )
+    # return None
 
 
 def check_tokens():
@@ -105,13 +121,8 @@ def parse_text(update, context):
     """Разбор сообщений пользователя."""
     chat = update.effective_chat
     command = update.message.text
-    global OWNER_NAME
-    global OWNER_CASE
-    global buttons
 
-    if OWNER_CHAT_ID is not None and OWNER_CHAT_ID != chat.id:
-        text = 'You dont have permisson to use this bot!'
-        return context.bot.send_message(chat_id=chat.id, text=text,)
+    # global buttons
 
     commands = {
         "Прсмртеть список дел \U00002696 \U0001F50D": user_cases_list,
@@ -126,10 +137,9 @@ def parse_text(update, context):
             )
         if pattern_name.match(command):
 
-            OWNER_NAME = command
-            buttons[0].add("Прсмртеть список дел \U00002696 \U0001F50D")
+            put_user_info(chat.id, 'name', command)
             reply_markup = ReplyKeyboardMarkup(buttons, resize_keyboard=True)
-            text = f'Данные для {OWNER_NAME} сохранены'
+            text = f'Данные для {command} сохранены'
             context.bot.send_message(chat_id=chat.id,
                                      text=text,
                                      reply_markup=reply_markup
@@ -141,14 +151,11 @@ def parse_text(update, context):
                                      text=text,
                                      )
             if check_case(command):
-                OWNER_CASE = command
-                buttons[1].add(
-                    "Посмотреть избранное дело \U00002696 \U0001F4DA"
-                    )
+                put_user_info(chat.id, 'case_id', command)
                 reply_markup = ReplyKeyboardMarkup(
                     buttons,
                     resize_keyboard=True)
-                text = f'Дело {OWNER_CASE} добавлено в избранное!'
+                text = f'Дело {command} добавлено в избранное!'
                 context.bot.send_message(chat_id=chat.id,
                                          text=text,
                                          reply_markup=reply_markup
@@ -176,17 +183,34 @@ def parse_text(update, context):
     else:
         commands[command](update, context)
 
-    return None
-
 
 def user_cases_list(update, context):
     """Функция для вывода списка дел."""
-    cases_search_by_name(OWNER_NAME, update, context)
+    chat = update.effective_chat
+    name = get_api_answer(chat.id)
+    if name['name']:
+        cases_search_by_name(name['name'], update, context)
+    else:
+        text = ('Для добавления имени '
+                'пожалуйста веди свое имя в формате "Иванов И.И."')
+        context.bot.send_message(chat_id=chat.id,
+                                 text=text,
+                                 )
 
 
 def user_favorite_case(update, context):
     """Функция для вывода избранного дела."""
-    case_search(OWNER_CASE, update, context)
+    chat = update.effective_chat
+    case_id = get_api_answer(chat.id)
+    if case_id['case_id']:
+        case_search(case_id['case_id'], update, context)
+    else:
+        text = ('Для добавления номера дела '
+                'пожалуйста веди номер дела в формате -> '
+                '"77RS0020-01-2018-016832-97"')
+        context.bot.send_message(chat_id=chat.id,
+                                 text=text,
+                                 )
 
 
 def main():

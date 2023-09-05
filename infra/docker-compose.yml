@@ -1,5 +1,32 @@
 version: '3.3'
 
+volumes:
+  static_value:
+  media_value:
+  database:
+
+services:
+  db:
+    image: postgres:13.0-alpine
+    volumes:
+      - database:/var/lib/postgresql/data/
+    env_file:
+      - ./.env
+    container_name: justice_bot_db
+
+  backend:
+    image: kotbarbarossa/justice_bot_backend:latest
+    restart: always
+    volumes:
+      - static_value:/backend/static/
+      - media_value:/backend/media/
+    depends_on:
+      - db
+    env_file:
+      - ./.env
+    container_name: justice_bot_backend
+
+
   bot:
     image: kotbarbarossa/justice_python_bot:latest
     restart: always
