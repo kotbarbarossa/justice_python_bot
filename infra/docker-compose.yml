@@ -14,11 +14,15 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     env_file:
-      - ./.env    
+      - ./.env
+    networks:
+      - mynetwork      
     container_name: justice_bot_db
 
   backend:
     image: kotbarbarossa/justice_bot_backend:latest
+    ports:
+      - "8000:8000"    
     restart: always
     volumes:
       - static_value:/backend/static/
@@ -27,6 +31,8 @@ services:
       - db
     env_file:
       - ./.env
+    networks:
+      - mynetwork      
     container_name: justice_bot_backend
 
   bot:
@@ -36,5 +42,9 @@ services:
       - backend    
     env_file:
       - ./.env
+    networks:
+      - mynetwork      
     container_name: justice_python_bot
 
+networks:
+  mynetwork:

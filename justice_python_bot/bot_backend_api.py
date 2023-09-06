@@ -8,7 +8,7 @@ HEADERS = {
 def get_api_answer(chat_id):
     """Get response from backend API."""
 
-    endpoint = f'http://localhost:8000/api/v1/telegram_users/{chat_id}/'
+    endpoint = f'http://backend:8000/api/v1/telegram_users/{chat_id}/'
 
     request_params = dict(
         url=endpoint,
@@ -28,7 +28,7 @@ def get_api_answer(chat_id):
 def post_new_user(chat_id):
     """Post new user."""
 
-    endpoint = 'http://localhost:8000/api/v1/telegram_users/'
+    endpoint = 'http://backend:8000/api/v1/telegram_users/'
 
     request_params = dict(
         url=endpoint,
@@ -49,7 +49,7 @@ def post_new_user(chat_id):
 def put_user_info(chat_id, key, value):
     """Update user info."""
 
-    endpoint = f'http://localhost:8000/api/v1/telegram_users/{chat_id}/'
+    endpoint = f'http://backend:8000/api/v1/telegram_users/{chat_id}/'
 
     request_params = dict(
         url=endpoint,
