@@ -1,5 +1,15 @@
+import logging
+
 import requests
 from bs4 import BeautifulSoup
+
+logging.basicConfig(
+    filename='bot_backend_api.log',
+    format='%(asctime)s - %(name)s - %(levelname)s - LINE: %(lineno)d'
+    ' - FUNCTION: %(funcName)s - MESSAGE: %(message)s',
+    level=logging.DEBUG,
+    filemode='w'
+)
 
 
 def check_case(case):
@@ -15,6 +25,7 @@ def check_case(case):
         detail_link = link_object[0]['href']
         return True if detail_link else False
     except Exception:
+        logging.critical('шибка подключения к mos-gorsud {error}')
         return False
 
 
@@ -44,6 +55,7 @@ def case_search(case, update, context):
                                  )
 
     except Exception:
+        logging.critical('шибка подключения к mos-gorsud {error}')
         text = 'произошла ошибка при запросе информации у сервера'
         context.bot.send_message(chat_id=chat.id,
                                  text=text,
@@ -72,6 +84,7 @@ def case_search(case, update, context):
                                  text=result_str,
                                  )
     except Exception:
+        logging.critical('шибка подключения к mos-gorsud {error}')
         text = 'ошибка при запросе дополнительной информации у сервера'
         context.bot.send_message(chat_id=chat.id,
                                  text=text,

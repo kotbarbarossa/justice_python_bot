@@ -1,8 +1,8 @@
+import logging
 import os
 # import datetime as dt
 import re
 import time
-# import logging
 from random import randrange
 
 import telegram
@@ -30,6 +30,9 @@ buttons = [
 
 def wake_up(update, context):
     """Отправка сообщения при подключении бота."""
+    logging.info(
+        f'Функция {wake_up.__name__} подключает бота '
+        f'для пользователся {update.message.chat.username}')
     chat = update.effective_chat
     name = update.message.chat.first_name
     username = update.message.chat.username
@@ -57,7 +60,7 @@ def wake_up(update, context):
                                  text=hello,
                                  reply_markup=reply_markup
                                  )
-
+        logging.info(f'Пользователь {name}.{username} активировал бота')
         post_new_user(chat.id)
 
     else:
@@ -70,7 +73,7 @@ def wake_up(update, context):
                                      text=hello_again,
                                      reply_markup=reply_markup
                                      )
-
+            logging.info(f'Пользователь {name}.{username} тыкнул бота')
         elif not user['case_id']:
             hello_again = (
                 f'Бот {status}. '
@@ -81,7 +84,7 @@ def wake_up(update, context):
                                      text=hello_again,
                                      reply_markup=reply_markup
                                      )
-
+            logging.info(f'Пользователь {name}.{username} тыкнул бота')
         elif not user['name']:
             hello_again = (
                 f'Бот {status}. Отслеживание дел не ведется. '
@@ -91,7 +94,7 @@ def wake_up(update, context):
                                      text=hello_again,
                                      reply_markup=reply_markup
                                      )
-
+            logging.info(f'Пользователь {name}.{username} тыкнул бота')
         else:
             hello_again = (
                 f'Бот {status}. '
@@ -102,11 +105,12 @@ def wake_up(update, context):
                                      text=hello_again,
                                      reply_markup=reply_markup
                                      )
-    # return None
+            logging.info(f'Пользователь {name}.{username} тыкнул бота')
 
 
 def check_tokens():
     """Функия проверяет наличие токенов."""
+    logging.info('Проверка токенов')
     flag = True
     tokens = [
         TELEGRAM_TOKEN,
@@ -114,6 +118,7 @@ def check_tokens():
     for token in tokens:
         if token is None:
             flag = False
+            logging.critical('Ошибка проверки токенов')
     return flag
 
 
@@ -121,6 +126,7 @@ def parse_text(update, context):
     """Разбор сообщений пользователя."""
     chat = update.effective_chat
     command = update.message.text
+    logging.info(f'В функцию parse_text пришел запрос "{command}".')
 
     # global buttons
 
@@ -144,7 +150,7 @@ def parse_text(update, context):
                                      text=text,
                                      reply_markup=reply_markup
                                      )
-
+            logging.info(f'Добавлено имя "{command}".')
         elif pattern_case.match(command):
             text = 'запрашиваем информацию на сервере'
             context.bot.send_message(chat_id=chat.id,
@@ -160,6 +166,7 @@ def parse_text(update, context):
                                          text=text,
                                          reply_markup=reply_markup
                                          )
+                logging.info(f'Добавлено дело "{command}".')
 
             else:
                 text = ('Дела с таким номером не существует! \n'
@@ -190,6 +197,7 @@ def user_cases_list(update, context):
     name = get_api_answer(chat.id)
     if name['name']:
         cases_search_by_name(name['name'], update, context)
+        logging.info(f'Поьзователю {chat.id} отправлен список дел.')
     else:
         text = ('Для добавления имени '
                 'пожалуйста веди свое имя в формате "Иванов И.И."')
@@ -204,6 +212,7 @@ def user_favorite_case(update, context):
     case_id = get_api_answer(chat.id)
     if case_id['case_id']:
         case_search(case_id['case_id'], update, context)
+        logging.info(f'Поьзователю {chat.id} отправлено сохраненное дело.')
     else:
         text = ('Для добавления номера дела '
                 'пожалуйста веди номер дела в формате -> '
@@ -234,4 +243,11 @@ def main():
 
 
 if __name__ == '__main__':
+    logging.basicConfig(
+        filename='justice_bot_main.log',
+        format='%(asctime)s - %(name)s - %(levelname)s - LINE: %(lineno)d'
+        ' - FUNCTION: %(funcName)s - MESSAGE: %(message)s',
+        level=logging.DEBUG,
+        filemode='w'
+    )
     main()

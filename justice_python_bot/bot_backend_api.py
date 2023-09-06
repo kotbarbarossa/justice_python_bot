@@ -1,4 +1,14 @@
+import logging
+
 import requests
+
+logging.basicConfig(
+    filename='bot_backend_api.log',
+    format='%(asctime)s - %(name)s - %(levelname)s - LINE: %(lineno)d'
+    ' - FUNCTION: %(funcName)s - MESSAGE: %(message)s',
+    level=logging.DEBUG,
+    filemode='w'
+)
 
 HEADERS = {
     # 'Authorization': f'OAuth {backend_token}'
@@ -17,6 +27,7 @@ def get_api_answer(chat_id):
     try:
         response = requests.get(**request_params)
     except requests.RequestException as error:
+        logging.critical('шибка подключения к backend API {error}')
         raise ConnectionError(f'Ошибка подключения к backend API {error}')
     status_code = response.status_code
     if status_code == 200:
@@ -38,6 +49,7 @@ def post_new_user(chat_id):
     try:
         response = requests.post(**request_params)
     except requests.RequestException as error:
+        logging.critical('шибка подключения к backend API {error}')
         raise ConnectionError(f'Ошибка подключения к backend API {error}')
     status_code = response.status_code
     if status_code == 201:
@@ -59,6 +71,7 @@ def put_user_info(chat_id, key, value):
     try:
         response = requests.patch(**request_params)
     except requests.RequestException as error:
+        logging.critical('шибка подключения к backend API {error}')
         raise ConnectionError(f'Ошибка подключения к backend API {error}')
     status_code = response.status_code
     if status_code == 200:
@@ -69,7 +82,7 @@ def put_user_info(chat_id, key, value):
 
 if __name__ == '__main__':
 
-    chat_id = 323124501
+    chat_id = 'num'
 
     user = get_api_answer(chat_id)
     if not user:
