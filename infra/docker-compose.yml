@@ -8,6 +8,7 @@ volumes:
 services:
   db:
     image: postgres:13.0-alpine
+    restart: always
     volumes:
       - justice_db_data:/var/lib/postgresql/data/
     environment:
@@ -45,6 +46,20 @@ services:
     networks:
       - mynetwork      
     container_name: justice_python_bot
+
+  nginx:
+    image: nginx:1.21.3-alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf
+      - static_value:/var/html/static/
+      - media_value:/var/html/media/
+    depends_on:
+      - backend
+    networks:
+      - mynetwork       
+    container_name: justice_bot_nginx    
 
 networks:
   mynetwork:
