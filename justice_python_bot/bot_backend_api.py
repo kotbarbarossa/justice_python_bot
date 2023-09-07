@@ -10,19 +10,21 @@ logging.basicConfig(
     filemode='w'
 )
 
-HEADERS = {
-    # 'Authorization': f'OAuth {backend_token}'
-    }
+
+def get_headers(backend_token):
+    return {
+        'Authorization': f'{backend_token}'
+        }
 
 
-def get_api_answer(chat_id):
+def get_api_answer(chat_id, backend_token):
     """Get response from backend API."""
 
     endpoint = f'http://backend:8000/api/v1/telegram_users/{chat_id}/'
 
     request_params = dict(
         url=endpoint,
-        headers=HEADERS,
+        headers=get_headers(backend_token),
     )
     try:
         response = requests.get(**request_params)
@@ -36,14 +38,14 @@ def get_api_answer(chat_id):
     return None
 
 
-def post_new_user(chat_id):
+def post_new_user(chat_id, backend_token):
     """Post new user."""
 
     endpoint = 'http://backend:8000/api/v1/telegram_users/'
 
     request_params = dict(
         url=endpoint,
-        headers=HEADERS,
+        headers=get_headers(backend_token),
         data={'chat_id': chat_id}
     )
     try:
@@ -58,14 +60,14 @@ def post_new_user(chat_id):
     return status_code
 
 
-def put_user_info(chat_id, key, value):
+def put_user_info(chat_id, key, value, backend_token):
     """Update user info."""
 
     endpoint = f'http://backend:8000/api/v1/telegram_users/{chat_id}/'
 
     request_params = dict(
         url=endpoint,
-        headers=HEADERS,
+        headers=get_headers(backend_token),
         data={f'{key}': value}
     )
     try:
@@ -83,8 +85,9 @@ def put_user_info(chat_id, key, value):
 if __name__ == '__main__':
 
     chat_id = 'num'
+    backend_token = 'token'
 
-    user = get_api_answer(chat_id)
+    user = get_api_answer(chat_id, backend_token)
     if not user:
         print('начальное сообщение')
         new_user = post_new_user(chat_id)

@@ -18,6 +18,7 @@ RETRY_TIME = 60
 load_dotenv()
 
 TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
+BACKEND_TOKEN = os.getenv('Authorization')
 
 bot = telegram.Bot(token=TELEGRAM_TOKEN)
 
@@ -37,7 +38,7 @@ def wake_up(update, context):
     name = update.message.chat.first_name
     username = update.message.chat.username
     reply_markup = ReplyKeyboardMarkup(buttons, resize_keyboard=True)
-    user = get_api_answer(chat.id)
+    user = get_api_answer(chat.id, BACKEND_TOKEN)
 
     random_status = randrange(6)
     statuses = {
@@ -61,7 +62,7 @@ def wake_up(update, context):
                                  reply_markup=reply_markup
                                  )
         logging.info(f'Пользователь {name}.{username} активировал бота')
-        post_new_user(chat.id)
+        post_new_user(chat.id, BACKEND_TOKEN)
 
     else:
         if not user['name'] and not user['case_id']:
@@ -114,6 +115,7 @@ def check_tokens():
     flag = True
     tokens = [
         TELEGRAM_TOKEN,
+        BACKEND_TOKEN,
     ]
     for token in tokens:
         if token is None:
@@ -143,7 +145,7 @@ def parse_text(update, context):
             )
         if pattern_name.match(command):
 
-            put_user_info(chat.id, 'name', command)
+            put_user_info(chat.id, 'name', command, BACKEND_TOKEN)
             reply_markup = ReplyKeyboardMarkup(buttons, resize_keyboard=True)
             text = f'Данные для {command} сохранены'
             context.bot.send_message(chat_id=chat.id,
@@ -157,7 +159,7 @@ def parse_text(update, context):
                                      text=text,
                                      )
             if check_case(command):
-                put_user_info(chat.id, 'case_id', command)
+                put_user_info(chat.id, 'case_id', command, BACKEND_TOKEN)
                 reply_markup = ReplyKeyboardMarkup(
                     buttons,
                     resize_keyboard=True)
@@ -194,7 +196,7 @@ def parse_text(update, context):
 def user_cases_list(update, context):
     """Функция для вывода списка дел."""
     chat = update.effective_chat
-    name = get_api_answer(chat.id)
+    name = get_api_answer(chat.id, BACKEND_TOKEN)
     if name['name']:
         cases_search_by_name(name['name'], update, context)
         logging.info(f'Поьзователю {chat.id} отправлен список дел.')
@@ -209,7 +211,7 @@ def user_cases_list(update, context):
 def user_favorite_case(update, context):
     """Функция для вывода избранного дела."""
     chat = update.effective_chat
-    case_id = get_api_answer(chat.id)
+    case_id = get_api_answer(chat.id, BACKEND_TOKEN)
     if case_id['case_id']:
         case_search(case_id['case_id'], update, context)
         logging.info(f'Поьзователю {chat.id} отправлено сохраненное дело.')
