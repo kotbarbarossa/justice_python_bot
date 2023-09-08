@@ -23,14 +23,18 @@ BACKEND_TOKEN = os.getenv('Authorization')
 bot = telegram.Bot(token=TELEGRAM_TOKEN)
 
 buttons = [
-    ["Прсмртеть список дел \U00002696 \U0001F50D"],
+    ["Посмотреть список дел \U00002696 \U0001F50D"],
     ["Посмотреть избранное дело \U00002696 \U0001F4DA"],
     ['Тыкнуть бота']
 ]
 
 
 def wake_up(update, context):
-    """Отправка сообщения при подключении бота."""
+    """
+    Функция идентификации, добавления пользователя
+    и измениния текущих параметров пользователя.
+    Отправка приветственных сообщений и статусов.
+    """
     chat = update.effective_chat
     name = update.message.chat.first_name
     username = update.message.chat.username
@@ -40,7 +44,6 @@ def wake_up(update, context):
         backend_token=BACKEND_TOKEN
         )
 
-    random_status = randrange(6)
     statuses = {
         '0': 'подключен черз канал межгалактической связи',
         '1': 'внимательно смотрит',
@@ -49,16 +52,18 @@ def wake_up(update, context):
         '4': 'перепрошит новой виндой',
         '5': 'перезапущен и помыт с мылом',
     }
+    random_status = randrange(len(statuses))
     status = statuses[str(random_status)]
 
     if status_code == 404:
         logging.info(
             f'Функция {wake_up.__name__} подключает бота '
-            f'для пользователся {update.message.chat.username}')
+            f'для пользователся {username}')
         text = (
-            f'Привет {name}.{username}! Это твой персональный приватный бот. '
-            f'Он закреплен за твоим пользователем: ({chat.id})!'
-            f'Пожалуйста веди свое имя в формате "Иванов И.И."'
+            f'Привет {name}.{username}! Это твой персональный помощник бот. '
+            'Бот умеет проверять наличие/отсутствие судебных дел! '
+            'Введи имя человека чьи судебные дела тебя интересуют. '
+            'Имя необходимо ввести в формате "Иванов И.И."'
         )
         send_message(update, context, text)
         logging.info(f'Пользователь {name}.{username} активировал бота')
@@ -72,7 +77,7 @@ def wake_up(update, context):
         if not response['name'] and not response['case_id']:
             text = (
                 f'Бот {status}. Отслеживание дел не ведется.'
-                'Пожалуйста веди свое имя в формате "Иванов И.И."'
+                'Пожалуйста веди имя в формате "Иванов И.И."'
             )
             send_message(update, context, text)
             logging.info(f'Пользователь {name}.{username} тыкнул бота')
@@ -100,7 +105,7 @@ def wake_up(update, context):
             send_message(update, context, text)
             logging.info(f'Пользователь {name}.{username} тыкнул бота')
     else:
-        text = 'Ведутся технические работы. Пожалуйста повторите запрос позже.'
+        text = 'Ведутся технические работы. Пожалуйста повтори запрос позже.'
         send_message(update, context, text)
 
 
@@ -126,7 +131,7 @@ def parse_text(update, context):
     logging.info(f'В функцию parse_text пришел запрос "{command}".')
 
     commands = {
-        "Прсмртеть список дел \U00002696 \U0001F50D": user_cases_list,
+        "Посмотреть список дел \U00002696 \U0001F50D": user_cases_list,
         "Посмотреть избранное дело \U00002696 \U0001F4DA": user_favorite_case,
         'Тыкнуть бота': wake_up,
     }
@@ -147,7 +152,7 @@ def parse_text(update, context):
             send_message(update, context, text)
             logging.info(f'Добавлено имя "{command}".')
         elif pattern_case.match(command):
-            text = 'запрашиваем информацию на сервере'
+            text = 'Запрашиваем информацию на сервере.'
             send_message(update, context, text)
             if check_case(command):
                 data = {'case_id': command}
@@ -196,7 +201,7 @@ def user_cases_list(update, context):
         logging.critical(
             f'Функция {user_cases_list.__name__} '
             'не получила ожидаемый ответ от backend.')
-        text = 'Ведутся технические работы. Пожалуйста повторите запрос позже.'
+        text = 'Ведутся технические работы. Пожалуйста повтори запрос позже.'
         send_message(update, context, text)
 
 
@@ -213,18 +218,19 @@ def user_favorite_case(update, context):
         logging.info(f'Поьзователю {chat.id} отправлено сохраненное дело.')
     elif status == 200:
         text = ('Для добавления номера дела '
-                'пожалуйста веди номер дела в формате -> '
+                'пожалуйста введи номер дела в формате -> '
                 '"77RS0020-01-2018-016832-97"')
         send_message(update, context, text)
     else:
         logging.critical(
             f'Функция {user_favorite_case.__name__} '
             'не получила ожидаемый ответ от backend.')
-        text = 'Ведутся технические работы. Пожалуйста повторите запрос позже.'
+        text = 'Ведутся технические работы. Пожалуйста повтори запрос позже.'
         send_message(update, context, text)
 
 
 def send_message(update, context, text):
+    """Отправка сообщения в чат."""
     chat = update.effective_chat
     text = text
     reply_markup = ReplyKeyboardMarkup(buttons, resize_keyboard=True)
