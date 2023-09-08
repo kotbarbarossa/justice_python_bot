@@ -6,7 +6,7 @@ import time
 from random import randrange
 
 import telegram
-from bot_backend_api import get_api_answer, post_new_user, put_user_info
+from bot_backend_api import request_backend_api
 from case_detail_by_number import case_search, check_case
 from dotenv import load_dotenv
 from surname_search import cases_search_by_name
@@ -31,14 +31,14 @@ buttons = [
 
 def wake_up(update, context):
     """Отправка сообщения при подключении бота."""
-    logging.info(
-        f'Функция {wake_up.__name__} подключает бота '
-        f'для пользователся {update.message.chat.username}')
     chat = update.effective_chat
     name = update.message.chat.first_name
     username = update.message.chat.username
-    reply_markup = ReplyKeyboardMarkup(buttons, resize_keyboard=True)
-    user = get_api_answer(chat.id, BACKEND_TOKEN)
+    status_code, response = request_backend_api(
+        method='GET',
+        chat_id=chat.id,
+        backend_token=BACKEND_TOKEN
+        )
 
     random_status = randrange(6)
     statuses = {
@@ -51,66 +51,61 @@ def wake_up(update, context):
     }
     status = statuses[str(random_status)]
 
-    if not user:
-        hello = (
+    if status_code == 404:
+        logging.info(
+            f'Функция {wake_up.__name__} подключает бота '
+            f'для пользователся {update.message.chat.username}')
+        text = (
             f'Привет {name}.{username}! Это твой персональный приватный бот. '
             f'Он закреплен за твоим пользователем: ({chat.id})!'
             f'Пожалуйста веди свое имя в формате "Иванов И.И."'
         )
-        context.bot.send_message(chat_id=chat.id,
-                                 text=hello,
-                                 reply_markup=reply_markup
-                                 )
+        send_message(update, context, text)
         logging.info(f'Пользователь {name}.{username} активировал бота')
-        post_new_user(chat.id, BACKEND_TOKEN)
+        request_backend_api(
+            method='POST',
+            chat_id=chat.id,
+            backend_token=BACKEND_TOKEN
+            )
 
-    else:
-        if not user['name'] and not user['case_id']:
-            hello_again = (
+    elif status_code in {200, 201}:
+        if not response['name'] and not response['case_id']:
+            text = (
                 f'Бот {status}. Отслеживание дел не ведется.'
                 'Пожалуйста веди свое имя в формате "Иванов И.И."'
             )
-            context.bot.send_message(chat_id=chat.id,
-                                     text=hello_again,
-                                     reply_markup=reply_markup
-                                     )
+            send_message(update, context, text)
             logging.info(f'Пользователь {name}.{username} тыкнул бота')
-        elif not user['case_id']:
-            hello_again = (
+        elif not response['case_id']:
+            text = (
                 f'Бот {status}. '
-                f'Отслеживание дел ведется для имени: {user["name"]}! '
+                f'Отслеживание дел ведется для имени: {response["name"]}! '
                 'Сохраненного дела нет.'
             )
-            context.bot.send_message(chat_id=chat.id,
-                                     text=hello_again,
-                                     reply_markup=reply_markup
-                                     )
+            send_message(update, context, text)
             logging.info(f'Пользователь {name}.{username} тыкнул бота')
-        elif not user['name']:
-            hello_again = (
+        elif not response['name']:
+            text = (
                 f'Бот {status}. Отслеживание дел не ведется. '
-                f'Сохраненое дело -> {user["case_id"]}.'
+                f'Сохраненое дело -> {response["case_id"]}.'
             )
-            context.bot.send_message(chat_id=chat.id,
-                                     text=hello_again,
-                                     reply_markup=reply_markup
-                                     )
+            send_message(update, context, text)
             logging.info(f'Пользователь {name}.{username} тыкнул бота')
         else:
-            hello_again = (
+            text = (
                 f'Бот {status}. '
-                f'Отслеживание дел ведется для имени: {user["name"]}! '
-                f'Сохраненое дело -> {user["case_id"]}.'
+                f'Отслеживание дел ведется для имени: {response["name"]}! '
+                f'Сохраненое дело -> {response["case_id"]}.'
             )
-            context.bot.send_message(chat_id=chat.id,
-                                     text=hello_again,
-                                     reply_markup=reply_markup
-                                     )
+            send_message(update, context, text)
             logging.info(f'Пользователь {name}.{username} тыкнул бота')
+    else:
+        text = 'Ведутся технические работы. Пожалуйста повторите запрос позже.'
+        send_message(update, context, text)
 
 
 def check_tokens():
-    """Функия проверяет наличие токенов."""
+    """Функия проверки наличия токенов."""
     logging.info('Проверка токенов')
     flag = True
     tokens = [
@@ -130,8 +125,6 @@ def parse_text(update, context):
     command = update.message.text
     logging.info(f'В функцию parse_text пришел запрос "{command}".')
 
-    # global buttons
-
     commands = {
         "Прсмртеть список дел \U00002696 \U0001F50D": user_cases_list,
         "Посмотреть избранное дело \U00002696 \U0001F4DA": user_favorite_case,
@@ -144,84 +137,108 @@ def parse_text(update, context):
             r"(\d\d[A-Z][A-Z]\d\d\d\d[-]\d\d[-]\d\d\d\d[-]\d\d\d\d\d\d[-]\d\d)"
             )
         if pattern_name.match(command):
-
-            put_user_info(chat.id, 'name', command, BACKEND_TOKEN)
-            reply_markup = ReplyKeyboardMarkup(buttons, resize_keyboard=True)
+            data = {'name': command}
+            request_backend_api(
+                method='PUT',
+                chat_id=chat.id,
+                data=data,
+                backend_token=BACKEND_TOKEN)
             text = f'Данные для {command} сохранены'
-            context.bot.send_message(chat_id=chat.id,
-                                     text=text,
-                                     reply_markup=reply_markup
-                                     )
+            send_message(update, context, text)
             logging.info(f'Добавлено имя "{command}".')
         elif pattern_case.match(command):
             text = 'запрашиваем информацию на сервере'
-            context.bot.send_message(chat_id=chat.id,
-                                     text=text,
-                                     )
+            send_message(update, context, text)
             if check_case(command):
-                put_user_info(chat.id, 'case_id', command, BACKEND_TOKEN)
-                reply_markup = ReplyKeyboardMarkup(
-                    buttons,
-                    resize_keyboard=True)
+                data = {'case_id': command}
+                request_backend_api(
+                    method='PUT',
+                    chat_id=chat.id,
+                    data=data,
+                    backend_token=BACKEND_TOKEN)
                 text = f'Дело {command} добавлено в избранное!'
-                context.bot.send_message(chat_id=chat.id,
-                                         text=text,
-                                         reply_markup=reply_markup
-                                         )
+                send_message(update, context, text)
                 logging.info(f'Добавлено дело "{command}".')
 
             else:
                 text = ('Дела с таким номером не существует! \n'
                         'Дело не было добавлено в избранное')
-                context.bot.send_message(chat_id=chat.id,
-                                         text=text,
-                                         )
+                send_message(update, context, text)
 
         else:
-            reply_markup = ReplyKeyboardMarkup(buttons, resize_keyboard=True)
             text = ('Для добавления/изменения имени или номера дела '
                     'нужно следовать шаблону: '
                     'Вввод для имени должен соответствовать -> "Иванов И.И.". '
                     'Вввод для номера дела должен соответствовать -> '
                     '"77RS0020-01-2018-016832-97"')
-            context.bot.send_message(chat_id=chat.id,
-                                     text=text,
-                                     reply_markup=reply_markup
-                                     )
+            send_message(update, context, text)
 
     else:
         commands[command](update, context)
 
 
 def user_cases_list(update, context):
-    """Функция для вывода списка дел."""
+    """Функция для вывода списка дел по ФИО."""
     chat = update.effective_chat
-    name = get_api_answer(chat.id, BACKEND_TOKEN)
-    if name['name']:
-        cases_search_by_name(name['name'], update, context)
+    status, response = request_backend_api(
+        method='GET',
+        chat_id=chat.id,
+        backend_token=BACKEND_TOKEN
+        )
+    if status == 200 and response['name']:
+        cases_search_by_name(response['name'], update, context)
         logging.info(f'Поьзователю {chat.id} отправлен список дел.')
-    else:
+    elif status == 200:
         text = ('Для добавления имени '
                 'пожалуйста веди свое имя в формате "Иванов И.И."')
-        context.bot.send_message(chat_id=chat.id,
-                                 text=text,
-                                 )
+        send_message(update, context, text)
+    else:
+        logging.critical(
+            f'Функция {user_cases_list.__name__} '
+            'не получила ожидаемый ответ от backend.')
+        text = 'Ведутся технические работы. Пожалуйста повторите запрос позже.'
+        send_message(update, context, text)
 
 
 def user_favorite_case(update, context):
-    """Функция для вывода избранного дела."""
+    """Функция для вывода избранного дела но номеру дела."""
     chat = update.effective_chat
-    case_id = get_api_answer(chat.id, BACKEND_TOKEN)
-    if case_id['case_id']:
-        case_search(case_id['case_id'], update, context)
+    status, response = request_backend_api(
+        method='GET',
+        chat_id=chat.id,
+        backend_token=BACKEND_TOKEN
+        )
+    if status == 200 and response['case_id']:
+        case_search(response['case_id'], update, context)
         logging.info(f'Поьзователю {chat.id} отправлено сохраненное дело.')
-    else:
+    elif status == 200:
         text = ('Для добавления номера дела '
                 'пожалуйста веди номер дела в формате -> '
                 '"77RS0020-01-2018-016832-97"')
-        context.bot.send_message(chat_id=chat.id,
-                                 text=text,
-                                 )
+        send_message(update, context, text)
+    else:
+        logging.critical(
+            f'Функция {user_favorite_case.__name__} '
+            'не получила ожидаемый ответ от backend.')
+        text = 'Ведутся технические работы. Пожалуйста повторите запрос позже.'
+        send_message(update, context, text)
+
+
+def send_message(update, context, text):
+    chat = update.effective_chat
+    text = text
+    reply_markup = ReplyKeyboardMarkup(buttons, resize_keyboard=True)
+    try:
+        context.bot.send_message(
+            chat_id=chat.id,
+            text=text,
+            reply_markup=reply_markup
+            )
+    except Exception as error:
+        logging.critical(
+            f'Функция {send_message.__name__} '
+            f'не смогла отправить сообщение. Ошибка: {error}')
+        raise AssertionError(f'{error} Ошибка отправки сообщения в телеграм')
 
 
 def main():
@@ -249,7 +266,7 @@ if __name__ == '__main__':
         filename='justice_bot_main.log',
         format='%(asctime)s - %(name)s - %(levelname)s - LINE: %(lineno)d'
         ' - FUNCTION: %(funcName)s - MESSAGE: %(message)s',
-        level=logging.DEBUG,
+        level=logging.INFO,
         filemode='w'
     )
     main()

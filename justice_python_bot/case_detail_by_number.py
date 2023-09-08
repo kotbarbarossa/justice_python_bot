@@ -3,14 +3,6 @@ import logging
 import requests
 from bs4 import BeautifulSoup
 
-logging.basicConfig(
-    filename='bot_backend_api.log',
-    format='%(asctime)s - %(name)s - %(levelname)s - LINE: %(lineno)d'
-    ' - FUNCTION: %(funcName)s - MESSAGE: %(message)s',
-    level=logging.DEBUG,
-    filemode='w'
-)
-
 
 def check_case(case):
     try:
@@ -89,3 +81,14 @@ def case_search(case, update, context):
         context.bot.send_message(chat_id=chat.id,
                                  text=text,
                                  )
+
+
+if __name__ == '__main__':
+
+    logging.basicConfig(
+        filename='case_detail_by_number.log',
+        format='%(asctime)s - %(name)s - %(levelname)s - LINE: %(lineno)d'
+        ' - FUNCTION: %(funcName)s - MESSAGE: %(message)s',
+        level=logging.DEBUG,
+        filemode='w'
+    )
