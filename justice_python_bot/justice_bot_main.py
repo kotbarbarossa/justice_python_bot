@@ -1,8 +1,6 @@
 import logging
 import os
-# import datetime as dt
 import re
-import time
 from random import randrange
 
 import telegram
@@ -256,15 +254,6 @@ def main():
     updater.start_polling()
 
     check_tokens()
-
-    i = 0
-
-    while True:
-
-        print(f'online time: {i} minutes!')
-        i += 1
-
-        time.sleep(RETRY_TIME)
 
 
 if __name__ == '__main__':
