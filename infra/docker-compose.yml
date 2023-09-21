@@ -47,6 +47,17 @@ services:
       - mynetwork      
     container_name: justice_python_bot
 
+  scheduler:
+    image: kotbarbarossa/justice_bot_scheduler:latest
+    restart: always
+    depends_on:
+      - backend    
+    env_file:
+      - ./.env
+    networks:
+      - mynetwork      
+    container_name: justice_bot_scheduler 
+
   nginx:
     image: nginx:1.21.3-alpine
     ports:

@@ -7,7 +7,7 @@ import telegram
 from bot_backend_api import request_backend_api
 from case_detail_by_number import case_search, check_case
 from dotenv import load_dotenv
-from surname_search import cases_search_by_name
+from surname_search import cases_search_by_name, count_case_numbers
 from telegram import ReplyKeyboardMarkup
 from telegram.ext import CommandHandler, Filters, MessageHandler, Updater
 
@@ -140,7 +140,13 @@ def parse_text(update, context):
             r"(\d\d[A-Z][A-Z]\d\d\d\d[-]\d\d[-]\d\d\d\d[-]\d\d\d\d\d\d[-]\d\d)"
             )
         if pattern_name.match(command):
-            data = {'name': command}
+            text = 'Запрашиваем информацию на сервере.'
+            send_message(update, context, text)
+            case_count = count_case_numbers(command, update, context)
+            data = {
+                'name': command,
+                'number_of_cases': case_count
+                }
             request_backend_api(
                 method='PUT',
                 chat_id=chat.id,

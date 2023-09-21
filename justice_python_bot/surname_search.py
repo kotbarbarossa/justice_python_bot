@@ -85,6 +85,33 @@ def cases_search_by_name(name, update, context):
                                  )
 
 
+def count_case_numbers(name, update, context):
+    """Функия получения информации о количестве дел."""
+    chat = update.effective_chat
+    headers = {'user-agent': 'my-app/0.0.1'}
+
+    page = 1
+
+    try:
+        r = requests.get(get_case_url(name, page), headers=headers)
+        soup = BeautifulSoup(r.text, "html.parser")
+
+        table_content = soup.find_all('td',)
+        table_content_list = [i.text.replace(
+            '\n', '').replace(
+            '\t', '').replace('   ', '').strip() for i in table_content]
+
+        table_lenght: int = 7
+
+        return len(table_content_list) // table_lenght
+
+    except Exception:
+        text = 'произошла ошибка при запросе информации у сервера'
+        context.bot.send_message(chat_id=chat.id,
+                                 text=text,
+                                 )
+
+
 def func_chunks_generators(lst, n):
     """Функия разделения списка на списки длинной n."""
     for i in range(0, len(lst), n):
