@@ -96,7 +96,7 @@ jobs:
             echo DB_PORT=${{ secrets.DB_PORT }} >> .env
             echo SECRET_KEY=${{ secrets.SECRET_KEY }} >> .env
             echo Authorization=${{ secrets.Authorization }} >> .env
-            echo AUTHORIZATION_HELPER=${{ secrets.AUTHORIZATION_HELPER }} >> .env
+            echo Authorization_helper=${{ secrets.Authorization_helper }} >> .env
 
             sudo docker-compose up -d 
 
