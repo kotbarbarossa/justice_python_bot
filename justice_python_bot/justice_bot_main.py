@@ -4,15 +4,14 @@ import re
 from random import randrange
 
 import telegram
+from bot_backend_api import request_backend_api
+from case_detail_by_number import case_search
 from dotenv import load_dotenv
+from surname_search import cases_search_by_name, count_case_numbers
 from telegram import (InlineKeyboardButton, InlineKeyboardMarkup,
                       ReplyKeyboardMarkup)
 from telegram.ext import (CallbackQueryHandler, CommandHandler, Filters,
                           MessageHandler, Updater)
-
-from bot_backend_api import request_backend_api
-from case_detail_by_number import case_search
-from surname_search import cases_search_by_name, count_case_numbers
 
 RETRY_TIME = 60
 

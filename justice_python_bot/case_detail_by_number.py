@@ -19,7 +19,7 @@ def case_search(case, name, update, context):
                       '&caseNumber=' + case + ''
                       '&participant=' + name + ''
                       )
-        
+
         r = requests.get(search_url, headers=headers)
 
         soup = BeautifulSoup(r.text, "html.parser")
