@@ -13,7 +13,7 @@ def get_case_url(name, page_number):
 
 
 def cases_search_by_name(name):
-    """Функия получения информации о судебном деле по номеру дела."""
+    """Функия получения информации о судебном деле по ФИО."""
 
     headers = {'user-agent': 'my-app/0.0.1'}
 
@@ -37,28 +37,11 @@ def cases_search_by_name(name):
             '\n', '').replace(
             '\t', '').replace('   ', '').strip() for i in table_content]
 
-        table_content_href = soup.find_all('a', class_='detailsLink')
-        links_list = []
-        for i in range(0, len(table_content_href), 2):
-            links_list.append(table_content_href[i]['href'])
-        case_numbers_list = []
-        for i in links_list:
-            detail_link = i
-            detail_url = 'https://mos-gorsud.ru' + detail_link
-            r = requests.get(detail_url, headers=headers)
-            soup = BeautifulSoup(r.text, "html.parser")
-            right_info = soup.find_all(class_="right")
-            case_numbers_list.append(right_info[0].text.strip())
-
         table_lenght: int = 7
 
         table_content_list = list(
             func_chunks_generators(table_content_list, table_lenght)
         )
-        for i in range(len(table_content_list)):
-            table_content_list[i][0] = (f'[{case_numbers_list[i]}]'
-                                        '(https://mos-gorsud.ru'
-                                        f'{links_list[i]})')
 
         result_list = []
         for row_content in table_content_list:
@@ -84,13 +67,10 @@ def count_case_numbers(name):
         soup = BeautifulSoup(r.text, "html.parser")
 
         table_content = soup.find_all('td',)
-        table_content_list = [i.text.replace(
-            '\n', '').replace(
-            '\t', '').replace('   ', '').strip() for i in table_content]
 
         table_lenght: int = 7
 
-        return len(table_content_list) // table_lenght
+        return len(table_content) // table_lenght
 
     except Exception as error:
         logging.critical(

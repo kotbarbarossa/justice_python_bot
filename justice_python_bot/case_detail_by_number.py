@@ -4,28 +4,11 @@ import requests
 from bs4 import BeautifulSoup
 
 
-def check_case(case):
-    try:
-        headers = {'user-agent': 'my-app/0.0.1'}
-        search_url = ('https://mos-gorsud.ru/search?formType=shortForm'
-                      '&courtAlias=&uid=' + case + ''
-                      )
-        r = requests.get(search_url, headers=headers)
-
-        soup = BeautifulSoup(r.text, "html.parser")
-        link_object = soup.find_all('a', class_='detailsLink')
-        detail_link = link_object[0]['href']
-        return True if detail_link else False
-    except Exception:
-        logging.critical('шибка подключения к mos-gorsud {error}')
-        return False
-
-
-def case_search(case, update, context):
+def case_search(case, name, update, context):
     """Функия получения информации о судебном деле по номеру дела."""
     chat = update.effective_chat
 
-    text = 'запрашиваем информацию'
+    text = 'Запрашиваем информацию'
     context.bot.send_message(chat_id=chat.id,
                              text=text,
                              )
@@ -33,22 +16,24 @@ def case_search(case, update, context):
 
     try:
         search_url = ('https://mos-gorsud.ru/search?formType=shortForm'
-                      '&courtAlias=&uid=' + case + ''
+                      '&caseNumber=' + case + ''
+                      '&participant=' + name + ''
                       )
+        
         r = requests.get(search_url, headers=headers)
 
         soup = BeautifulSoup(r.text, "html.parser")
         link_object = soup.find_all('a', class_='detailsLink')
         detail_link = link_object[0]['href']
     except IndexError:
-        text = 'поиск не выдал результатов'
+        text = 'Поиск не выдал результатов'
         context.bot.send_message(chat_id=chat.id,
                                  text=text,
                                  )
 
     except Exception:
-        logging.critical('шибка подключения к mos-gorsud {error}')
-        text = 'произошла ошибка при запросе информации у сервера'
+        logging.critical('Ошибка подключения к mos-gorsud {error}')
+        text = 'Произошла ошибка при запросе информации у сервера'
         context.bot.send_message(chat_id=chat.id,
                                  text=text,
                                  )
@@ -76,8 +61,8 @@ def case_search(case, update, context):
                                  text=result_str,
                                  )
     except Exception:
-        logging.critical('шибка подключения к mos-gorsud {error}')
-        text = 'ошибка при запросе дополнительной информации у сервера'
+        logging.critical('Ошибка подключения к mos-gorsud {error}')
+        text = 'Ошибка при запросе дополнительной информации у сервера'
         context.bot.send_message(chat_id=chat.id,
                                  text=text,
                                  )

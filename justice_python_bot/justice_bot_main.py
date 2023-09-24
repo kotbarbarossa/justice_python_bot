@@ -4,12 +4,15 @@ import re
 from random import randrange
 
 import telegram
-from bot_backend_api import request_backend_api
-from case_detail_by_number import case_search, check_case
 from dotenv import load_dotenv
+from telegram import (InlineKeyboardButton, InlineKeyboardMarkup,
+                      ReplyKeyboardMarkup)
+from telegram.ext import (CallbackQueryHandler, CommandHandler, Filters,
+                          MessageHandler, Updater)
+
+from bot_backend_api import request_backend_api
+from case_detail_by_number import case_search
 from surname_search import cases_search_by_name, count_case_numbers
-from telegram import ReplyKeyboardMarkup
-from telegram.ext import CommandHandler, Filters, MessageHandler, Updater
 
 RETRY_TIME = 60
 
@@ -43,7 +46,7 @@ def wake_up(update, context):
         )
 
     statuses = {
-        '0': 'подключен черз канал межгалактической связи',
+        '0': 'подключен через канал межгалактической связи',
         '1': 'внимательно смотрит',
         '2': 'вышел из матрицы',
         '3': 'весь в внимании',
@@ -92,7 +95,10 @@ def wake_up(update, context):
         elif not response['name']:
             text = (
                 f'Бот {status}. Отслеживание дел не ведется. '
-                f'Сохраненое дело -> {response["case_id"]}.'
+                f'Сохраненое дело -> {response["case_id"]}. '
+                'Но вообще-то ты не должен видеть это сообщение! '
+                'Потому что механика бота не подразумеваеи наличия '
+                'сохраненного дела без сохраненного имени!'
             )
             send_message(update, context, text)
             logging.info(f'Пользователь {name}.{username} тыкнул бота')
@@ -139,9 +145,6 @@ def parse_text(update, context):
 
     if command not in commands:
         pattern_name = re.compile(r"([А-ЯЁ][а-яё]+[ ][А-ЯЁ]\.[А-ЯЁ]\.)")
-        pattern_case = re.compile(
-            r"(\d\d[A-Z][A-Z]\d\d\d\d[-]\d\d[-]\d\d\d\d[-]\d\d\d\d\d\d[-]\d\d)"
-            )
         if pattern_name.match(command):
             text = 'Запрашиваем информацию на сервере.'
             send_message(update, context, text)
@@ -149,7 +152,8 @@ def parse_text(update, context):
                 case_count = count_case_numbers(command)
                 data = {
                     'name': command,
-                    'number_of_cases': case_count
+                    'number_of_cases': case_count,
+                    'case_id': ''
                     }
                 request_backend_api(
                     method='PUT',
@@ -162,31 +166,11 @@ def parse_text(update, context):
             except Exception:
                 text = 'Произошла ошибка при запросе информации у сервера'
                 send_message(update, context, text)
-        elif pattern_case.match(command):
-            text = 'Запрашиваем информацию на сервере.'
-            send_message(update, context, text)
-            if check_case(command):
-                data = {'case_id': command}
-                request_backend_api(
-                    method='PUT',
-                    chat_id=chat.id,
-                    data=data,
-                    backend_token=BACKEND_TOKEN)
-                text = f'Дело {command} добавлено в избранное!'
-                send_message(update, context, text)
-                logging.info(f'Добавлено дело "{command}".')
-
-            else:
-                text = ('Дела с таким номером не существует! \n'
-                        'Дело не было добавлено в избранное')
-                send_message(update, context, text)
-
         else:
-            text = ('Для добавления/изменения имени или номера дела '
+            text = ('Для добавления/изменения имени '
                     'нужно следовать шаблону: '
-                    'Вввод для имени должен соответствовать -> "Иванов И.И.". '
-                    'Вввод для номера дела должен соответствовать -> '
-                    '"77RS0020-01-2018-016832-97"')
+                    'Вввод для имени должен соответствовать -> "Иванов И.И." '
+                    )
             send_message(update, context, text)
 
     else:
@@ -202,7 +186,7 @@ def user_cases_list(update, context):
         backend_token=BACKEND_TOKEN
         )
     if status == 200 and response['name']:
-        text = 'запрашиваем информацию'
+        text = 'Запрашиваем информацию на сервере.'
         send_message(update, context, text)
         try:
             result_count, result_list = cases_search_by_name(response['name'])
@@ -210,14 +194,19 @@ def user_cases_list(update, context):
                 result_str = ''
                 for i in case:
                     result_str += (f'{i}: {case[i]} \n')
-                send_message(update, context, result_str)
+                callback_data = case['Номер дела ~ материала']
+                update_button = InlineKeyboardButton(
+                    "Добавить дело в избранное", callback_data=callback_data)
+                reply_markup = InlineKeyboardMarkup([[update_button]])
+                update.message.reply_text(
+                    result_str, reply_markup=reply_markup)
             text = result_count
             send_message(update, context, text)
             text = f'Показано: {len(result_list)}'
             send_message(update, context, text)
             logging.info(f'Поьзователю {chat.id} отправлен список дел.')
         except Exception:
-            text = 'произошла ошибка при запросе информации у сервера'
+            text = 'Произошла ошибка при запросе информации у сервера.'
             send_message(update, context, text)
     elif status == 200:
         text = ('Для добавления имени '
@@ -240,12 +229,12 @@ def user_favorite_case(update, context):
         backend_token=BACKEND_TOKEN
         )
     if status == 200 and response['case_id']:
-        case_search(response['case_id'], update, context)
+        case_search(response['case_id'], response['name'], update, context)
         logging.info(f'Поьзователю {chat.id} отправлено сохраненное дело.')
     elif status == 200:
-        text = ('Для добавления номера дела '
-                'пожалуйста введи номер дела в формате -> '
-                '"77RS0020-01-2018-016832-97"')
+        text = ('Для добавления дела в избранное '
+                'пожалуйста выбери интересующее тебя дело '
+                'в списке дел полученных для введенного имени')
         send_message(update, context, text)
     else:
         logging.critical(
@@ -274,10 +263,26 @@ def send_message(update, context, text):
         raise AssertionError(f'{error} Ошибка отправки сообщения в телеграм')
 
 
+def button_callback(update, context):
+    query = update.callback_query
+    user_id = query.from_user.id
+    callback_data = query.data
+    data = {'case_id': callback_data}
+    request_backend_api(
+        method='PUT',
+        chat_id=user_id,
+        data=data,
+        backend_token=BACKEND_TOKEN)
+    text = f'Дело {callback_data} добавлено в избранное!'
+    send_message(update, context, text)
+    logging.info(f'Добавлено дело "{callback_data}".')
+
+
 def main():
     """Основная логика работы бота."""
     updater = Updater(token=TELEGRAM_TOKEN)
     updater.dispatcher.add_handler(CommandHandler('start', wake_up))
+    updater.dispatcher.add_handler(CallbackQueryHandler(button_callback))
     updater.dispatcher.add_handler(MessageHandler(Filters.text, parse_text))
 
     updater.start_polling()
