@@ -145,19 +145,23 @@ def parse_text(update, context):
         if pattern_name.match(command):
             text = 'Запрашиваем информацию на сервере.'
             send_message(update, context, text)
-            case_count = count_case_numbers(command, update, context)
-            data = {
-                'name': command,
-                'number_of_cases': case_count
-                }
-            request_backend_api(
-                method='PUT',
-                chat_id=chat.id,
-                data=data,
-                backend_token=BACKEND_TOKEN)
-            text = f'Данные для {command} сохранены'
-            send_message(update, context, text)
-            logging.info(f'Добавлено имя "{command}".')
+            try:
+                case_count = count_case_numbers(command)
+                data = {
+                    'name': command,
+                    'number_of_cases': case_count
+                    }
+                request_backend_api(
+                    method='PUT',
+                    chat_id=chat.id,
+                    data=data,
+                    backend_token=BACKEND_TOKEN)
+                text = f'Данные для {command} сохранены'
+                send_message(update, context, text)
+                logging.info(f'Добавлено имя "{command}".')
+            except Exception:
+                text = 'Произошла ошибка при запросе информации у сервера'
+                send_message(update, context, text)
         elif pattern_case.match(command):
             text = 'Запрашиваем информацию на сервере.'
             send_message(update, context, text)
@@ -198,8 +202,23 @@ def user_cases_list(update, context):
         backend_token=BACKEND_TOKEN
         )
     if status == 200 and response['name']:
-        cases_search_by_name(response['name'], update, context)
-        logging.info(f'Поьзователю {chat.id} отправлен список дел.')
+        text = 'запрашиваем информацию'
+        send_message(update, context, text)
+        try:
+            result_count, result_list = cases_search_by_name(response['name'])
+            for i, case in enumerate(result_list):
+                result_str = ''
+                for i in case:
+                    result_str += (f'{i}: {case[i]} \n')
+                send_message(update, context, result_str)
+            text = result_count
+            send_message(update, context, text)
+            text = f'Показано: {len(result_list)}'
+            send_message(update, context, text)
+            logging.info(f'Поьзователю {chat.id} отправлен список дел.')
+        except Exception:
+            text = 'произошла ошибка при запросе информации у сервера'
+            send_message(update, context, text)
     elif status == 200:
         text = ('Для добавления имени '
                 'пожалуйста веди свое имя в формате "Иванов И.И."')
@@ -245,6 +264,7 @@ def send_message(update, context, text):
         context.bot.send_message(
             chat_id=chat.id,
             text=text,
+            parse_mode='Markdown',
             reply_markup=reply_markup
             )
     except Exception as error:

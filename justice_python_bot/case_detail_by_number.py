@@ -62,13 +62,13 @@ def case_search(case, update, context):
         list_left = [i.text.replace('\n', '').strip() for i in left_info]
         strip = '                                    '
         strange_strip = '   '
-        right_left = [
+        list_right = [
             i.text.replace(
                 '\n', '').replace(
                     f'{strip}', '').replace(
                         f'{strange_strip}', '').strip() for i in right_info]
 
-        result_dict = dict(zip(list_left, right_left))
+        result_dict = dict(zip(list_left, list_right))
         result_str = ''
         for i in result_dict:
             result_str += (f'{i}: {result_dict[i]} \n')

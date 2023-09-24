@@ -1,3 +1,5 @@
+import logging
+
 import requests
 from bs4 import BeautifulSoup
 
@@ -10,14 +12,8 @@ def get_case_url(name, page_number):
             )
 
 
-def cases_search_by_name(name, update, context):
+def cases_search_by_name(name):
     """Функия получения информации о судебном деле по номеру дела."""
-    chat = update.effective_chat
-
-    text = 'запрашиваем информацию'
-    context.bot.send_message(chat_id=chat.id,
-                             text=text,
-                             )
 
     headers = {'user-agent': 'my-app/0.0.1'}
 
@@ -41,53 +37,44 @@ def cases_search_by_name(name, update, context):
             '\n', '').replace(
             '\t', '').replace('   ', '').strip() for i in table_content]
 
+        table_content_href = soup.find_all('a', class_='detailsLink')
+        links_list = []
+        for i in range(0, len(table_content_href), 2):
+            links_list.append(table_content_href[i]['href'])
+        case_numbers_list = []
+        for i in links_list:
+            detail_link = i
+            detail_url = 'https://mos-gorsud.ru' + detail_link
+            r = requests.get(detail_url, headers=headers)
+            soup = BeautifulSoup(r.text, "html.parser")
+            right_info = soup.find_all(class_="right")
+            case_numbers_list.append(right_info[0].text.strip())
+
         table_lenght: int = 7
 
         table_content_list = list(
             func_chunks_generators(table_content_list, table_lenght)
         )
+        for i in range(len(table_content_list)):
+            table_content_list[i][0] = (f'[{case_numbers_list[i]}]'
+                                        '(https://mos-gorsud.ru'
+                                        f'{links_list[i]})')
 
         result_list = []
         for row_content in table_content_list:
             result_list.append(dict(zip(table_headers_list, row_content)))
-
-        for i, case in enumerate(result_list):
-            result_str = ''
-
-            for i in case:
-
-                result_str += (f'{i}: {case[i]} \n')
-
-            context.bot.send_message(chat_id=chat.id,
-                                     text=result_str,
-                                     )
-
-        text = resultsearch_text_message[0]
-        context.bot.send_message(chat_id=chat.id,
-                                 text=text,
-                                 )
-
-        text = f'Показано: {len(result_list)}'
-        context.bot.send_message(chat_id=chat.id,
-                                 text=text,
-                                 )
+        return resultsearch_text_message[0], result_list
 
     except IndexError:
-        text = 'поиск не выдал результатов'
-        context.bot.send_message(chat_id=chat.id,
-                                 text=text,
-                                 )
+        logging.critical('Поиск не выдал результатов')
 
-    except Exception:
-        text = 'произошла ошибка при запросе информации у сервера'
-        context.bot.send_message(chat_id=chat.id,
-                                 text=text,
-                                 )
+    except Exception as error:
+        logging.critical(
+            f'Произошла ошибка при запросе информации у сервера {error}')
 
 
-def count_case_numbers(name, update, context):
+def count_case_numbers(name):
     """Функия получения информации о количестве дел."""
-    chat = update.effective_chat
     headers = {'user-agent': 'my-app/0.0.1'}
 
     page = 1
@@ -105,11 +92,9 @@ def count_case_numbers(name, update, context):
 
         return len(table_content_list) // table_lenght
 
-    except Exception:
-        text = 'произошла ошибка при запросе информации у сервера'
-        context.bot.send_message(chat_id=chat.id,
-                                 text=text,
-                                 )
+    except Exception as error:
+        logging.critical(
+            f'Произошла ошибка при запросе информации у сервера {error}')
 
 
 def func_chunks_generators(lst, n):
@@ -120,5 +105,21 @@ def func_chunks_generators(lst, n):
 
 if __name__ == '__main__':
 
+    logging.basicConfig(
+        filename='surname_search.log',
+        format='%(asctime)s - %(name)s - %(levelname)s - LINE: %(lineno)d'
+        ' - FUNCTION: %(funcName)s - MESSAGE: %(message)s',
+        level=logging.INFO,
+        filemode='w'
+    )
+
     name = input()
-    cases_search_by_name(name)
+    result_count, result_list = cases_search_by_name(name)
+    for i, case in enumerate(result_list):
+        result_str = ''
+
+        for i in case:
+
+            result_str += (f'{i}: {case[i]} \n')
+        print(result_str)
+    print(result_count)
