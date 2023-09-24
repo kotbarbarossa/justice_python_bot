@@ -2,6 +2,7 @@ import logging
 
 import requests
 from bs4 import BeautifulSoup
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
 
 def case_search(case, name, update, context):
@@ -57,9 +58,12 @@ def case_search(case, name, update, context):
         result_str = ''
         for i in result_dict:
             result_str += (f'{i}: {result_dict[i]} \n')
-        context.bot.send_message(chat_id=chat.id,
-                                 text=result_str,
-                                 )
+
+        url_button = InlineKeyboardButton(
+            "Посмотреть на сайте", url=detail_url)
+        reply_markup = InlineKeyboardMarkup([[url_button]])
+        update.message.reply_text(result_str, reply_markup=reply_markup)
+
     except Exception:
         logging.critical('Ошибка подключения к mos-gorsud {error}')
         text = 'Ошибка при запросе дополнительной информации у сервера'
