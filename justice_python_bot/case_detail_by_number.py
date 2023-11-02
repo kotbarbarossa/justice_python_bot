@@ -2,17 +2,11 @@ import logging
 
 import requests
 from bs4 import BeautifulSoup
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
 
-def case_search(case, name, update, context):
+def case_search(case, name):
     """Функия получения информации о судебном деле по номеру дела."""
-    chat = update.effective_chat
 
-    text = 'Запрашиваем информацию'
-    context.bot.send_message(chat_id=chat.id,
-                             text=text,
-                             )
     headers = {'user-agent': 'my-app/0.0.1'}
 
     try:
@@ -27,17 +21,12 @@ def case_search(case, name, update, context):
         link_object = soup.find_all('a', class_='detailsLink')
         detail_link = link_object[0]['href']
     except IndexError:
-        text = 'Поиск не выдал результатов'
-        context.bot.send_message(chat_id=chat.id,
-                                 text=text,
-                                 )
+        logging.INFO('Поиск не выдал результатов')
+        return 'Поиск не выдал результатов'
 
     except Exception:
         logging.critical('Ошибка подключения к mos-gorsud {error}')
-        text = 'Произошла ошибка при запросе информации у сервера'
-        context.bot.send_message(chat_id=chat.id,
-                                 text=text,
-                                 )
+        return 'Ошибка подключения к mos-gorsud'
 
     try:
         detail_url = 'https://mos-gorsud.ru' + detail_link
@@ -58,18 +47,12 @@ def case_search(case, name, update, context):
         result_str = ''
         for i in result_dict:
             result_str += (f'{i}: {result_dict[i]} \n')
-
-        url_button = InlineKeyboardButton(
-            "Посмотреть на сайте", url=detail_url)
-        reply_markup = InlineKeyboardMarkup([[url_button]])
-        update.message.reply_text(result_str, reply_markup=reply_markup)
+        case_status = result_dict['Текущее состояние']
+        return result_str, detail_url, case_status
 
     except Exception:
         logging.critical('Ошибка подключения к mos-gorsud {error}')
-        text = 'Ошибка при запросе дополнительной информации у сервера'
-        context.bot.send_message(chat_id=chat.id,
-                                 text=text,
-                                 )
+        return 'Ошибка подключения к mos-gorsud'
 
 
 if __name__ == '__main__':

@@ -152,7 +152,9 @@ def parse_text(update, context):
                 data = {
                     'name': command,
                     'number_of_cases': case_count,
-                    'case_id': ''
+                    'case_id': '',
+                    'case_url': '',
+                    'case_status': '',
                     }
                 request_backend_api(
                     method='PUT',
@@ -184,18 +186,20 @@ def user_cases_list(update, context):
         chat_id=chat.id,
         backend_token=BACKEND_TOKEN
         )
-    if status == 200 and response['name']:
+    name = response.get('name')
+    if status == 200 and name:
         text = 'Запрашиваем информацию на сервере.'
         send_message(update, context, text)
         try:
-            result_count, result_list = cases_search_by_name(response['name'])
+            result_count, result_list = cases_search_by_name(name)
             for i, case in enumerate(result_list):
                 result_str = ''
                 for i in case:
                     result_str += (f'{i}: {case[i]} \n')
-                callback_data = case['Номер дела ~ материала']
+                case_id = case['Номер дела ~ материала']
                 update_button = InlineKeyboardButton(
-                    "Добавить дело в избранное", callback_data=callback_data)
+                    "Добавить дело в избранное",
+                    callback_data=f'{case_id}|{name}')
                 reply_markup = InlineKeyboardMarkup([[update_button]])
                 update.message.reply_text(
                     result_str, reply_markup=reply_markup)
@@ -228,8 +232,15 @@ def user_favorite_case(update, context):
         backend_token=BACKEND_TOKEN
         )
     if status == 200 and response['case_id']:
-        case_search(response['case_id'], response['name'], update, context)
-        logging.info(f'Поьзователю {chat.id} отправлено сохраненное дело.')
+        text = 'Запрашиваем информацию'
+        send_message(update, context, text)
+        text, detail_url, case_status = case_search(
+            response['case_id'], response['name'])
+        url_button = InlineKeyboardButton(
+            "Посмотреть на сайте", url=detail_url)
+        reply_markup = InlineKeyboardMarkup([[url_button]])
+        update.message.reply_text(text, reply_markup=reply_markup)
+        logging.info(f'Поьзователю {chat.id} отправлено {text}')
     elif status == 200:
         text = ('Для добавления дела в избранное '
                 'пожалуйста выбери интересующее тебя дело '
@@ -267,15 +278,32 @@ def button_callback(update, context):
     query = update.callback_query
     user_id = query.from_user.id
     callback_data = query.data
-    data = {'case_id': callback_data}
-    request_backend_api(
-        method='PUT',
-        chat_id=user_id,
-        data=data,
-        backend_token=BACKEND_TOKEN)
-    text = f'Дело {callback_data} добавлено в избранное!'
+    callback_data_list = callback_data.split('|')
+    case_id = callback_data_list[0]
+    name = callback_data_list[1]
+    text = 'Идет запись. Не выключайте питание.'
     send_message(update, context, text)
-    logging.info(f'Добавлено дело "{callback_data}".')
+
+    try:
+        text, detail_url, case_status = case_search(case_id, name)
+
+        data = {
+            'case_id': case_id,
+            'case_url': detail_url,
+            'case_status': case_status,
+            }
+        request_backend_api(
+            method='PUT',
+            chat_id=user_id,
+            data=data,
+            backend_token=BACKEND_TOKEN)
+        text = f'Дело {callback_data} добавлено в избранное!'
+        logging.info(f'Добавлено дело "{callback_data}".')
+    except Exception as e:
+        text = 'Ошибка при добавлении дела в избранное.'
+        logging.error(f'Ошибка при добавлении дела в избранное "{e}".')
+    finally:
+        send_message(update, context, text)
 
 
 def main():
