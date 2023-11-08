@@ -83,7 +83,7 @@ jobs:
             sudo docker-compose -f docker-compose-configs/justice-bot/docker-compose-justice-bot.yml -p root down
             sudo docker-compose -f docker-compose-configs/nginx/docker-compose-nginx.yml -p root down
 
-            cd /docker-compose-configs/justice-bot/
+            cd docker-compose-configs/justice-bot/
             
             sudo docker pull kotbarbarossa/justice_python_bot:latest
             sudo docker pull kotbarbarossa/justice_bot_backend:latest
