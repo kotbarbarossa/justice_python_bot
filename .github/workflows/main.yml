@@ -80,13 +80,16 @@ jobs:
           passphrase: ${{ secrets.PASSPHRASE }}
           file: workflows/main.yml
           script: |
-            sudo docker-compose stop
+            sudo docker-compose -f docker-compose-configs/justice-bot/docker-compose-justice-bot.yml -p root down
+            sudo docker-compose -f docker-compose-configs/nginx/docker-compose-nginx.yml -p root down
+
+            cd /docker-compose-configs/justice-bot/
+            
             sudo docker pull kotbarbarossa/justice_python_bot:latest
             sudo docker pull kotbarbarossa/justice_bot_backend:latest
             sudo docker pull kotbarbarossa/justice_bot_scheduler:latest
-            touch .env
-            echo TELEGRAM_TOKEN=${{ secrets.TELEGRAM_TOKEN }} >> .env
 
+            echo TELEGRAM_TOKEN=${{ secrets.TELEGRAM_TOKEN }} > .env
             echo DB_ENGINE=${{ secrets.DB_ENGINE }} >> .env
             echo DB_NAME=${{ secrets.DB_NAME }} >> .env
             echo POSTGRES_DB=${{ secrets.POSTGRES_DB }} >> .env
@@ -98,7 +101,10 @@ jobs:
             echo Authorization=${{ secrets.Authorization }} >> .env
             echo Authorization_helper=${{ secrets.Authorization_helper }} >> .env
 
-            sudo docker-compose up -d 
+            cd ../../
+
+            sudo docker-compose -f docker-compose-configs/justice-bot/docker-compose-justice-bot.yml -p root up -d
+            sudo docker-compose -f docker-compose-configs/nginx/docker-compose-nginx.yml -p root up -d
 
   send_message:
     runs-on: ubuntu-latest

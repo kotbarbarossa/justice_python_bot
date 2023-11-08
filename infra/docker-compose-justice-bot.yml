@@ -1,0 +1,62 @@
+version: '3.3'
+
+volumes:
+  static_value:
+  media_value:
+  justice_db_data:
+
+services:
+  db:
+    image: postgres:13.0-alpine
+    restart: always
+    volumes:
+      - justice_db_data:/var/lib/postgresql/data/
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    env_file:
+      - ./.env
+    networks:
+      - justice_bot_network      
+    container_name: justice_bot_db
+
+  backend:
+    image: kotbarbarossa/justice_bot_backend:latest
+    ports:
+      - "8000:8000"    
+    restart: always
+    volumes:
+      - static_value:/backend/static/
+      - media_value:/backend/media/
+    depends_on:
+      - db
+    env_file:
+      - ./.env
+    networks:
+      - justice_bot_network      
+    container_name: justice_bot_backend
+
+  bot:
+    image: kotbarbarossa/justice_python_bot:latest
+    restart: always
+    depends_on:
+      - backend    
+    env_file:
+      - ./.env
+    networks:
+      - justice_bot_network      
+    container_name: justice_python_bot
+
+  scheduler:
+    image: kotbarbarossa/justice_bot_scheduler:latest
+    restart: always
+    depends_on:
+      - backend    
+    env_file:
+      - ./.env
+    networks:
+      - justice_bot_network      
+    container_name: justice_bot_scheduler  
+
+networks:
+  justice_bot_network:
